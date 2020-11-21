@@ -1,7 +1,11 @@
 package com.iscs.imgwriter
 
-import cats.effect.{Blocker, ConcurrentEffect, ContextShift, Timer}
-import com.iscs.imgwriter.routes.Routes
+import java.awt.image.BufferedImage
+import cats.effect.{Blocker, Concurrent, ConcurrentEffect, ContextShift, Sync, Timer}
+import cats.implicits._
+import com.iscs.imgwriter.domains.ImageWriterService
+import com.iscs.imgwriter.routes.Routes.imageRoutes
+import com.iscs.imgwriter.util.ResourceProcessor
 import com.typesafe.scalalogging.Logger
 import fs2.Stream
 import org.http4s.implicits._
@@ -12,25 +16,23 @@ object Server {
 
   private val L = Logger[this.type]
 
-  def stream[F[_]: ConcurrentEffect]()(implicit T: Timer[F], Con: ContextShift[F]): Stream[F, Nothing] =
-    Stream.resource(Blocker[F]).flatMap { blocker =>
-      val imgWriter = new domains.ImageWriterService[F]()
+  def getResource[F[_]: Sync: ContextShift: Timer: ConcurrentEffect](resName: String, blocker: Blocker): F[BufferedImage] =
+    for {
+      resProc <- Concurrent[F].delay(new ResourceProcessor(resName))
+      image <- resProc.readImageFromFile(blocker)
+    } yield image
 
-      // Combine Service Routes into an HttpApp.
-      // Can also be done via a Router if you
-      // want to extract a segments not checked
-      // in the underlying routes.
-      val httpApp = Routes.imageRoutes[F](imgWriter).orNotFound
+  def stream[F[_]: ConcurrentEffect](image: List[BufferedImage])(implicit T: Timer[F], Con: ContextShift[F]): Stream[F, Nothing] = {
+    val srvStream = for {
+      imgWriter <- Stream.eval(Concurrent[F].delay(new ImageWriterService[F](image)))
+      httpApp <- Stream.eval(Concurrent[F].delay(imageRoutes[F](imgWriter).orNotFound))
+      finalHttpApp <- Stream.eval(Concurrent[F].delay(hpLogger.httpApp(logHeaders = true, logBody = true)(httpApp)))
 
-      // With Middlewares in place
-      val finalHttpApp = hpLogger.httpApp(logHeaders = true, logBody = true)(httpApp)
-
-      val srvStream = for {
-        exitCode <- BlazeServerBuilder[F]
-          .bindHttp(8080, "0.0.0.0")
-          .withHttpApp(finalHttpApp)
-          .serve
-      } yield exitCode
-      srvStream.drain
+      exitCode <- BlazeServerBuilder[F]
+        .bindHttp(8080, "0.0.0.0")
+        .withHttpApp(finalHttpApp)
+        .serve
+    } yield exitCode
+    srvStream.drain
   }
 }

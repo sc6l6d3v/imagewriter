@@ -23,3 +23,8 @@ To attach to said image via shell:
 ```
 docker exec -it <imagehash> /bin/bash
 ```
+
+REST syntax
+GET http://localhost:8080/static/<image>/content
+
+where image is a single digit from 0-3 and content is URLencoded text with "@" as a line delimiter.

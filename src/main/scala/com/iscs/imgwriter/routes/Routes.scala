@@ -12,6 +12,8 @@ import scala.util.Try
 object Routes {
   private val L = Logger[this.type]
   private val inputLimit = 5000
+  private val topLeftX = 70
+  private val topLeftY = 180
 
   def imageRoutes[F[_]: Sync: Concurrent](I: ImageWriterService[F]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F]{}
@@ -24,7 +26,7 @@ object Routes {
           Ok(for {
             imageNdx <- Stream.eval(Concurrent[F].delay(Try(index.toInt).toOption.getOrElse(I.numImages)))
             _ <- Stream.eval(Concurrent[F].delay(L.info(s""""request" txt=$txt image=$index""")))
-            img <- I.updateImage(txt, 70, 70, imageNdx)
+            img <- I.updateImage(txt, topLeftX, topLeftY, imageNdx)
           } yield img)
     }
   }

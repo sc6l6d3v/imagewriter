@@ -18,6 +18,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
   private val delim = "@"
   val numImages: Int = image.size - 1
   private val radians = Math.PI/30.0  // 180/30 -> 6
+  private val cosRadians = Math.cos(radians)
 
   def updateImage(text: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {
     cloneImage <- Stream.eval(cloneImage(image(Math.min(index, numImages))))
@@ -59,10 +60,11 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     val imgHeight = img.getHeight
     val g = img.getGraphics
     val fontMetrics = g.getFontMetrics(g.getFont.deriveFont(fontSize))
-    val stringHeight = fontMetrics.stringWidth(text)
     val stringRect2D = fontMetrics.getStringBounds(text, g)
+    val stringHeight = stringRect2D.getHeight
+    val stringWidth = stringRect2D.getWidth * cosRadians
     if (y + stringHeight < imgHeight &&
-        x + stringRect2D.getWidth.toInt < imgWidth) {
+        x + stringWidth.toInt < imgWidth) {
       embedText(text, g, x, y)
     } else {
       embedText("Too long", g, x, y)

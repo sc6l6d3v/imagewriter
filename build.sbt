@@ -15,12 +15,8 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.http4s"       %% "http4s-blaze-server" % Http4sVersion,
       "org.http4s"       %% "http4s-blaze-client" % Http4sVersion,
-      "org.http4s"       %% "http4s-circe"        % Http4sVersion,
       "org.http4s"       %% "http4s-dsl"          % Http4sVersion,
       "org.http4s"       %% "http4s-async-http-client" % Http4sVersion,
-      "io.circe"         %% "circe-generic"       % CirceVersion,
-      "io.circe"         %% "circe-parser"        % CirceVersion,
-      "io.circe"         %% "circe-optics"        % CirceVersion,
       "org.specs2"       %% "specs2-core"         % Specs2Version % "test",
       "ch.qos.logback"   %  "logback-classic"     % LogbackVersion,
       "com.github.cb372" %% "cats-retry"          % catsRetryVersion,

@@ -39,8 +39,7 @@
         <appender-ref ref="STDOUT" />
     </appender>
 
-  <logger name="org.http4s.client" level="DEBUG" />
-  <logger name="io.circe" level="DEBUG" />
+  <logger name="org.http4s.client" level="INFO" />
 
   <root level="INFO">
       <appender-ref ref="DEFAULT-FILE-ASYNC" />

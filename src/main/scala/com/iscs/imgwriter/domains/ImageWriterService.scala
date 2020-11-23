@@ -1,6 +1,6 @@
 package com.iscs.imgwriter.domains
 
-import java.awt.{Color, Graphics}
+import java.awt.{Color, Graphics, Graphics2D}
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 
@@ -17,6 +17,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
   private val fontSize = 16f
   private val delim = "@"
   private val numImages = image.size - 1
+  private val radians = Math.PI/30.0  // 180/30 -> 6
 
   def updateImage(text: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {
     cloneImage <- Stream.eval(cloneImage(image(Math.min(index, numImages))))
@@ -46,10 +47,12 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
 
   private def withText(img: BufferedImage, text: String, x: Int, y: Int): BufferedImage = {
     def embedText(text: String, g: Graphics, x: Int, y: Int): Unit =  {
-      g.setFont(g.getFont.deriveFont(fontSize))
-      g.setColor(Color.magenta)
-      g.drawString(text, x, y)
-      g.dispose()
+      val gfx2D = g.asInstanceOf[Graphics2D]
+      gfx2D.setFont(g.getFont.deriveFont(fontSize))
+      gfx2D.setColor(Color.magenta)
+      gfx2D.rotate(-radians)
+      gfx2D.drawString(text, x, y)
+      gfx2D.dispose()
     }
 
     val imgWidth = img.getWidth
@@ -57,8 +60,9 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     val g = img.getGraphics
     val fontMetrics = g.getFontMetrics(g.getFont.deriveFont(fontSize))
     val stringHeight = fontMetrics.stringWidth(text)
-    val stringWidth = fontMetrics.getStringBounds(text, g)
-    if (y + stringHeight < imgHeight && x + stringWidth.getWidth.toInt < imgWidth) {
+    val stringRect2D = fontMetrics.getStringBounds(text, g)
+    if (y + stringHeight < imgHeight &&
+        x + stringRect2D.getWidth.toInt < imgWidth) {
       embedText(text, g, x, y)
     } else {
       embedText("Too long", g, x, y)

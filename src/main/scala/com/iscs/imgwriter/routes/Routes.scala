@@ -11,16 +11,21 @@ import scala.util.Try
 
 object Routes {
   private val L = Logger[this.type]
+  private val inputLimit = 5000
 
   def imageRoutes[F[_]: Sync: Concurrent](I: ImageWriterService[F]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F]{}
     import dsl._
     HttpRoutes.of[F] {
       case req @ GET -> Root / "static" / index / txt =>
-        Ok(for {
-          imageNdx <- Stream.eval(Concurrent[F].delay(Try(index.toInt).toOption.getOrElse(0)))
-          img <- I.updateImage(txt, 70, 70, imageNdx)
-        } yield img)
+        if (txt.size > inputLimit)
+          Ok("Text overflow")
+        else
+          Ok(for {
+            imageNdx <- Stream.eval(Concurrent[F].delay(Try(index.toInt).toOption.getOrElse(0)))
+            _ <- Stream.eval(Concurrent[F].delay(L.info(s""""request" txt=$txt image=$index""")))
+            img <- I.updateImage(txt, 70, 70, imageNdx)
+          } yield img)
     }
   }
 }

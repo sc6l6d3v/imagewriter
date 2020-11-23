@@ -22,7 +22,7 @@ object Routes {
           Ok("Text overflow")
         else
           Ok(for {
-            imageNdx <- Stream.eval(Concurrent[F].delay(Try(index.toInt).toOption.getOrElse(0)))
+            imageNdx <- Stream.eval(Concurrent[F].delay(Try(index.toInt).toOption.getOrElse(I.numImages)))
             _ <- Stream.eval(Concurrent[F].delay(L.info(s""""request" txt=$txt image=$index""")))
             img <- I.updateImage(txt, 70, 70, imageNdx)
           } yield img)

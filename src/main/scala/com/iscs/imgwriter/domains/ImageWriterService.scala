@@ -16,7 +16,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
   private val yOffset = 18
   private val fontSize = 16f
   private val delim = "@"
-  private val numImages = image.size - 1
+  val numImages: Int = image.size - 1
   private val radians = Math.PI/30.0  // 180/30 -> 6
 
   def updateImage(text: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {

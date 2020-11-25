@@ -5,6 +5,8 @@ val LogbackVersion = "1.2.3"
 val catsRetryVersion = "1.1.0"
 val fs2Version = "2.2.2"
 val loggingVersion = "3.9.2"
+val zxingVersion = "3.3.0"
+val zxingJavaseVersion = "3.3.0"
 
 lazy val root = (project in file("."))
   .settings(
@@ -23,6 +25,8 @@ lazy val root = (project in file("."))
       "co.fs2"           %% "fs2-core"            % fs2Version,
       "co.fs2"           %% "fs2-io"              % fs2Version,
       "co.fs2"           %% "fs2-reactive-streams" % fs2Version,
+      "com.google.zxing" %  "core"                % zxingVersion,
+      "com.google.zxing" %  "javase"              % zxingJavaseVersion,
       "com.typesafe.scala-logging" %% "scala-logging" % loggingVersion
     ),
     addCompilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),

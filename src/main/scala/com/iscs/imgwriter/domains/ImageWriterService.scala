@@ -6,6 +6,9 @@ import java.io.ByteArrayOutputStream
 
 import cats.effect.{Concurrent, ConcurrentEffect}
 import cats.implicits._
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.client.j2se.MatrixToImageWriter
+import com.google.zxing.qrcode.QRCodeWriter
 import fs2.Stream
 import javax.imageio.ImageIO
 import org.http4s.Uri
@@ -13,12 +16,13 @@ import org.log4s.getLogger
 
 class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit F: ConcurrentEffect[F]) {
   private val L = getLogger
-  private val yOffset = 18
+  private val yOffset = 85
   private val fontSize = 16f
   private val delim = "@"
   val numImages: Int = image.size - 1
   private val radians = Math.PI/30.0  // 180/30 -> 6
   private val cosRadians = Math.cos(radians)
+  private val qrDim = 100
 
   def updateImage(text: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {
     cloneImage <- Stream.eval(cloneImage(image(Math.min(index, numImages))))
@@ -47,13 +51,19 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
   } yield s
 
   private def withText(img: BufferedImage, text: String, x: Int, y: Int): BufferedImage = {
-    def embedText(text: String, g: Graphics, x: Int, y: Int): Unit =  {
-      val gfx2D = g.asInstanceOf[Graphics2D]
-      gfx2D.setFont(g.getFont.deriveFont(fontSize))
+    def embedText(text: String, gfx2D: Graphics2D, x: Int, y: Int): Unit = {
+      gfx2D.setFont(gfx2D.getFont.deriveFont(fontSize))
       gfx2D.setColor(Color.magenta)
       gfx2D.rotate(-radians)
       gfx2D.drawString(text, x, y)
-      gfx2D.dispose()
+      gfx2D.rotate(radians)
+    }
+
+    def embedQR(text: String, gfx2D: Graphics2D, x: Int, y: Int): Unit = {
+      val qrCodeWriter = new QRCodeWriter
+      val bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, qrDim, qrDim)
+      val qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix)
+      gfx2D.drawImage(qrImage, x, y, null)
     }
 
     val imgWidth = img.getWidth
@@ -63,11 +73,14 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     val stringRect2D = fontMetrics.getStringBounds(text, g)
     val stringHeight = stringRect2D.getHeight
     val stringWidth = stringRect2D.getWidth * cosRadians
+    val gfx2D = g.asInstanceOf[Graphics2D]
     if (y + stringHeight < imgHeight &&
         x + stringWidth.toInt < imgWidth) {
-      embedText(text, g, x, y)
+      embedText(text, gfx2D, x, y)
+      embedQR(text, gfx2D, x - 85, y - 85)
+      gfx2D.dispose()
     } else {
-      embedText("Too long", g, x, y)
+      embedText("Too long", gfx2D, x, y)
     }
     img
   }

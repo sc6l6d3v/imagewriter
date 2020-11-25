@@ -14,6 +14,9 @@ object Main extends IOApp {
   private val image3 = "image3.jpg"
   private val image4 = "image4.jpg"
 
+  private val port = 8080
+  private val listener = "0.0.0.0"
+
   def getImageStream(imgFile: String): Stream[IO, BufferedImage] =
     Stream.eval(Blocker[IO].use { blocker =>
       Server.getResource[IO](imgFile, blocker)
@@ -30,7 +33,7 @@ object Main extends IOApp {
         resImage3 <- getImageStream(image3)
         resImage4 <- getImageStream(image4)
 
-      str <- Server.stream[IO](List(resImage1, resImage2, resImage3, resImage4))
+      str <- Server.stream[IO](List(resImage1, resImage2, resImage3, resImage4), port, listener)
     } yield str
 
     s <- serverStream

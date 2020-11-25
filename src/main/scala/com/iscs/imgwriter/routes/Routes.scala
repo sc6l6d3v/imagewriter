@@ -12,7 +12,7 @@ import scala.util.Try
 object Routes {
   private val L = Logger[this.type]
   private val inputLimit = 5000
-  private val topLeftX = 70
+  private val topLeftX = 100
   private val topLeftY = 180
 
   def imageRoutes[F[_]: Sync: Concurrent](I: ImageWriterService[F]): HttpRoutes[F] = {

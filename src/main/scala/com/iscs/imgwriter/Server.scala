@@ -22,14 +22,14 @@ object Server {
       image <- resProc.readImageFromFile(blocker)
     } yield image
 
-  def stream[F[_]: ConcurrentEffect](image: List[BufferedImage])(implicit T: Timer[F], Con: ContextShift[F]): Stream[F, Nothing] = {
+  def stream[F[_]: ConcurrentEffect](image: List[BufferedImage], port: Int, listener: String)(implicit T: Timer[F], Con: ContextShift[F]): Stream[F, Nothing] = {
     val srvStream = for {
       imgWriter <- Stream.eval(Concurrent[F].delay(new ImageWriterService[F](image)))
       httpApp <- Stream.eval(Concurrent[F].delay(imageRoutes[F](imgWriter).orNotFound))
       finalHttpApp <- Stream.eval(Concurrent[F].delay(hpLogger.httpApp(logHeaders = true, logBody = true)(httpApp)))
 
       exitCode <- BlazeServerBuilder[F]
-        .bindHttp(8080, "0.0.0.0")
+        .bindHttp(port, listener)
         .withHttpApp(finalHttpApp)
         .serve
     } yield exitCode

@@ -6,6 +6,8 @@ import com.typesafe.scalalogging.Logger
 import fs2.Stream
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
+import org.http4s.server.middleware.{CORS, CORSConfig}
+import scala.concurrent.duration._
 
 import scala.util.Try
 
@@ -15,10 +17,20 @@ object Routes {
   private val topLeftX = 100
   private val topLeftY = 180
 
+  private val reactOrigin = "http://localhost:3000"
+  private val methods = Set("GET")
+  private val methodConfig = CORSConfig(
+    anyOrigin = false,
+    allowCredentials = true,
+    maxAge = 1.day.toSeconds,
+    allowedMethods = Some(methods),
+    allowedOrigins = Set(reactOrigin)
+  )
+
   def imageRoutes[F[_]: Sync: Concurrent](I: ImageWriterService[F]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F]{}
     import dsl._
-    HttpRoutes.of[F] {
+    val service = HttpRoutes.of[F] {
       case req @ GET -> Root / "static" / index / txt =>
         if (txt.size > inputLimit)
           Ok("Text overflow")
@@ -29,5 +41,6 @@ object Routes {
             img <- I.updateImage(txt, topLeftX, topLeftY, imageNdx)
           } yield img)
     }
+    CORS(service, methodConfig)
   }
 }

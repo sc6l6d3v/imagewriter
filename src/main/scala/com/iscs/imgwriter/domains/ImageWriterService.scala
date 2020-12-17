@@ -16,12 +16,14 @@ import org.log4s.getLogger
 
 class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit F: ConcurrentEffect[F]) {
   private val L = getLogger
+  private val xOffset = 85
   private val yOffset = 85
   private val fontSize = 16f
   private val delim = "@"
   val numImages: Int = image.size - 1
   private val radians = Math.PI/30.0  // 180/30 -> 6
   private val cosRadians = Math.cos(radians)
+  private val sinRadians = Math.sin(radians)
   private val qrDim = 100
 
   def updateImage(text: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {
@@ -31,7 +33,9 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
       val ndx = LazyList.from(0).iterator
       Concurrent[F].delay(decodedText.split(delim)
         .foldLeft(cloneImage) { case (acc, stringPart) =>
-          withText(acc, stringPart, x, y + yOffset * ndx.next())
+          val count = ndx.next
+          val xAdj = count * xOffset * sinRadians
+          withText(acc, stringPart.replaceAll("\\*\\*\\*","@"), xAdj, x, y + yOffset * count)
         })
     }
     bytes <- imgToByte(textImage)
@@ -50,7 +54,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     s <- Stream.emits(data)
   } yield s
 
-  private def withText(img: BufferedImage, text: String, x: Int, y: Int): BufferedImage = {
+  private def withText(img: BufferedImage, text: String, xAdj: Double, x: Int, y: Int): BufferedImage = {
     def embedText(text: String, gfx2D: Graphics2D, x: Int, y: Int): Unit = {
       gfx2D.setFont(gfx2D.getFont.deriveFont(fontSize))
       gfx2D.setColor(Color.magenta)
@@ -76,8 +80,8 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     val gfx2D = g.asInstanceOf[Graphics2D]
     if (y + stringHeight < imgHeight &&
         x + stringWidth.toInt < imgWidth) {
-      embedText(text, gfx2D, x, y)
-      embedQR(text, gfx2D, x - 85, y - 85)
+      embedText(text, gfx2D, x - xAdj.toInt, y)
+      embedQR(text, gfx2D, x - xOffset, y - yOffset)
       gfx2D.dispose()
     } else {
       embedText("Too long", gfx2D, x, y)

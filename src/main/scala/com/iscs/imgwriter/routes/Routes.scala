@@ -18,13 +18,14 @@ object Routes {
   private val topLeftY = 180
 
   private val reactOrigin = "http://localhost:3000"
+  private val reactApache = "https://localhost"
   private val methods = Set("GET")
   private val methodConfig = CORSConfig(
     anyOrigin = false,
     allowCredentials = true,
     maxAge = 1.day.toSeconds,
     allowedMethods = Some(methods),
-    allowedOrigins = Set(reactOrigin)
+    allowedOrigins = Set(reactOrigin, reactApache)
   )
 
   def imageRoutes[F[_]: Sync: Concurrent](I: ImageWriterService[F]): HttpRoutes[F] = {

@@ -33,7 +33,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
       val ndx = LazyList.from(0).iterator
       Concurrent[F].delay(decodedText.split(delim)
         .foldLeft(cloneImage) { case (acc, stringPart) =>
-          val count = ndx.next
+          val count = ndx.next()
           val xAdj = count * xOffset * sinRadians
           withText(acc, stringPart.replaceAll("\\*\\*\\*","@"), xAdj, x, y + yOffset * count)
         })

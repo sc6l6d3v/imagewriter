@@ -18,21 +18,29 @@ object Routes {
   private val topLeftY = 180
 
   private val reactOrigin = "http://localhost:3000"
-  private val reactApache = "https://localhost"
+  private val reactDeploys = List("http://localhost",
+    "https://localhost",
+    "http://berne.iscs-i.com",
+    "https://berne.iscs-i.com",
+    "https://192.168.4.46",
+    "http://192.168.4.46")
   private val methods = Set("GET")
+  private def checkOrigin(origin: String): Boolean =
+    allowedOrigins.contains(origin)
+  private val allowedOrigins = Set(reactOrigin) ++ reactDeploys
   private val methodConfig = CORSConfig(
     anyOrigin = false,
     allowCredentials = true,
     maxAge = 1.day.toSeconds,
     allowedMethods = Some(methods),
-    allowedOrigins = Set(reactOrigin, reactApache)
+    allowedOrigins = checkOrigin
   )
 
   def imageRoutes[F[_]: Sync: Concurrent](I: ImageWriterService[F]): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F]{}
     import dsl._
     val service = HttpRoutes.of[F] {
-      case req @ GET -> Root / "static" / index / txt =>
+      case req @ GET -> Root / "img" / index / txt =>
         if (txt.size > inputLimit)
           Ok("Text overflow")
         else

@@ -18,13 +18,18 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
   private val L = getLogger
   private val xOffset = 85
   private val yOffset = 85
-  private val fontSize = 16f
+  private val fontSize = 12f
   private val delim = "@"
   val numImages: Int = image.size - 1
   private val radians = Math.PI/30.0  // 180/30 -> 6
   private val cosRadians = Math.cos(radians)
   private val sinRadians = Math.sin(radians)
   private val qrDim = 100
+  private val colorMap = Map(0 -> Color.white,
+    1 -> Color.blue,
+    2 -> Color.red,
+    3 -> Color.magenta,
+  )
 
   def updateImage(text: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {
     cloneImage <- Stream.eval(cloneImage(image(Math.min(index, numImages))))
@@ -35,7 +40,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
         .foldLeft(cloneImage) { case (acc, stringPart) =>
           val count = ndx.next()
           val xAdj = count * xOffset * sinRadians
-          withText(acc, stringPart.replaceAll("\\*\\*\\*","@"), xAdj, x, y + yOffset * count)
+          withText(index, acc, stringPart.replaceAll("\\*\\*\\*","@"), xAdj, x, y + yOffset * count)
         })
     }
     bytes <- imgToByte(textImage)
@@ -54,10 +59,10 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     s <- Stream.emits(data)
   } yield s
 
-  private def withText(img: BufferedImage, text: String, xAdj: Double, x: Int, y: Int): BufferedImage = {
+  private def withText(index: Int, img: BufferedImage, text: String, xAdj: Double, x: Int, y: Int): BufferedImage = {
     def embedText(text: String, gfx2D: Graphics2D, x: Int, y: Int): Unit = {
       gfx2D.setFont(gfx2D.getFont.deriveFont(fontSize))
-      gfx2D.setColor(Color.magenta)
+      gfx2D.setColor(colorMap(index))
       gfx2D.rotate(-radians)
       gfx2D.drawString(text, x, y)
       gfx2D.rotate(radians)
@@ -77,6 +82,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     val stringRect2D = fontMetrics.getStringBounds(text, g)
     val stringHeight = stringRect2D.getHeight
     val stringWidth = stringRect2D.getWidth * cosRadians
+    val byteWidth = (stringWidth.toInt - x) / text.length
     val gfx2D = g.asInstanceOf[Graphics2D]
     if (y + stringHeight < imgHeight &&
         x + stringWidth.toInt < imgWidth) {

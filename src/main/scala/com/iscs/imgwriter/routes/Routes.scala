@@ -14,6 +14,7 @@ import scala.util.Try
 object Routes {
   private val L = Logger[this.type]
   private val inputLimit = 5000
+  private val topicLimit = 128
   private val topLeftX = 100
   private val topLeftY = 180
 
@@ -40,14 +41,14 @@ object Routes {
     val dsl = new Http4sDsl[F]{}
     import dsl._
     val service = HttpRoutes.of[F] {
-      case req @ GET -> Root / "img" / index / txt =>
-        if (txt.size > inputLimit)
+      case req @ GET -> Root / "img" / index / topic / link =>
+        if (link.size > inputLimit || topic.size > topicLimit)
           Ok("Text overflow")
         else
           Ok(for {
             imageNdx <- Stream.eval(Concurrent[F].delay(Try(index.toInt).toOption.getOrElse(I.numImages)))
-            _ <- Stream.eval(Concurrent[F].delay(L.info(s""""request" txt=$txt image=$index""")))
-            img <- I.updateImage(txt, topLeftX, topLeftY, imageNdx)
+            _ <- Stream.eval(Concurrent[F].delay(L.info(s""""request" txt=$link image=$index""")))
+            img <- I.updateImage(link, topic, topLeftX, topLeftY, imageNdx)
           } yield img)
     }
     CORS(service, methodConfig)

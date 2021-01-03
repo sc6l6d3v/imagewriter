@@ -1,6 +1,6 @@
 package com.iscs.imgwriter.domains
 
-import java.awt.{Color, Graphics, Graphics2D}
+import java.awt.{Color, Graphics2D}
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 
@@ -31,16 +31,16 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     3 -> Color.magenta,
   )
 
-  def updateImage(text: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {
+  def updateImage(url: String, topic: String, x: Int, y: Int, index: Int): Stream[F, Byte] = for {
     cloneImage <- Stream.eval(cloneImage(image(Math.min(index, numImages))))
-    decodedText <- Stream.eval(Concurrent[F].delay(Uri.decode(text)))
+    decodedText <- Stream.eval(Concurrent[F].delay(Uri.decode(url)))
     textImage <- Stream.eval {
       val ndx = LazyList.from(0).iterator
       Concurrent[F].delay(decodedText.split(delim)
         .foldLeft(cloneImage) { case (acc, stringPart) =>
           val count = ndx.next()
           val xAdj = count * xOffset * sinRadians
-          withText(index, acc, stringPart.replaceAll("\\*\\*\\*","@"), xAdj, x, y + yOffset * count)
+          withText(index, topic, acc, stringPart.replaceAll("\\*\\*\\*","@"), xAdj, x, y + yOffset * count)
         })
     }
     bytes <- imgToByte(textImage)
@@ -59,7 +59,7 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
     s <- Stream.emits(data)
   } yield s
 
-  private def withText(index: Int, img: BufferedImage, text: String, xAdj: Double, x: Int, y: Int): BufferedImage = {
+  private def withText(index: Int, topic: String, img: BufferedImage, text: String, xAdj: Double, x: Int, y: Int): BufferedImage = {
     def embedText(text: String, gfx2D: Graphics2D, x: Int, y: Int): Unit = {
       gfx2D.setFont(gfx2D.getFont.deriveFont(fontSize))
       gfx2D.setColor(colorMap(index))
@@ -75,23 +75,23 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
       gfx2D.drawImage(qrImage, x, y, null)
     }
 
-    val imgWidth = img.getWidth
-    val imgHeight = img.getHeight
+//    val imgWidth = img.getWidth
+//    val imgHeight = img.getHeight
     val g = img.getGraphics
     val fontMetrics = g.getFontMetrics(g.getFont.deriveFont(fontSize))
     val stringRect2D = fontMetrics.getStringBounds(text, g)
-    val stringHeight = stringRect2D.getHeight
-    val stringWidth = stringRect2D.getWidth * cosRadians
-    val byteWidth = (stringWidth.toInt - x) / text.length
+//    val stringHeight = stringRect2D.getHeight
+//    val stringWidth = stringRect2D.getWidth * cosRadians
+//    val byteWidth = (stringWidth.toInt - x) / text.length
     val gfx2D = g.asInstanceOf[Graphics2D]
-    if (y + stringHeight < imgHeight &&
-        x + stringWidth.toInt < imgWidth) {
-      embedText(text, gfx2D, x - xAdj.toInt, y)
+//    if (y + stringHeight < imgHeight &&
+//        x + stringWidth.toInt < imgWidth) {
+      embedText(topic, gfx2D, x - xAdj.toInt, y)
       embedQR(text, gfx2D, x - xOffset, y - yOffset)
       gfx2D.dispose()
-    } else {
+/*    } else {
       embedText("Too long", gfx2D, x, y)
-    }
+    }*/
     img
   }
 }

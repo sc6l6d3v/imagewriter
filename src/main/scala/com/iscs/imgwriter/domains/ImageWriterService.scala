@@ -70,7 +70,8 @@ class ImageWriterService[F[_]: Concurrent](image: List[BufferedImage])(implicit 
 
     def embedQR(text: String, gfx2D: Graphics2D, x: Int, y: Int): Unit = {
       val qrCodeWriter = new QRCodeWriter
-      val bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, qrDim, qrDim)
+      val encodedText = text.split("").mkString(".")
+      val bitMatrix = qrCodeWriter.encode(encodedText, BarcodeFormat.QR_CODE, qrDim, qrDim)
       val qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix)
       gfx2D.drawImage(qrImage, x, y, null)
     }
